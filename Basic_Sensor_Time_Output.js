@@ -8,6 +8,8 @@ let collidedSensorCount = 0; // Counter for collided sensors
 
 function setup() {
   createCanvas(800, 800);
+  frameRate(30);
+
 
   // Create a new Circle object and add it to the array
   
@@ -20,6 +22,7 @@ function setup() {
 
 function draw() {
   background(220);
+  
 
   // Loop through the circles array and display each circle
   for (let i = 0; i < circles.length; i++) {
@@ -34,8 +37,11 @@ function draw() {
       if (circles[i].outerIntersects(sensor) && !sensor.hasCollided && millis() - sensor.startTime > cooldown) {
         // Circle's outer line hits the sensor and cooldown time has passed
         print("Sensor " + sensor.id + " milliseconds: " + (millis() - sensor.startTime));
-        sensor.startTime = millis(); // Reset the timer for this sensor
+        
+        
         sensor.hasCollided = true; // Set the flag to indicate collision
+        sensor.collisionTime = millis();
+        
         collidedSensorCount++; // Increment the collided sensor count
       }
 
@@ -76,8 +82,17 @@ class Circle {
     this.x = x;
     this.y = y;
     this.r = r;
-    this.speed = 1; // Speed at which the circle expands
+    this.speed = 60; // Speed at which the circle expands in pixels per second
   }
+  
+  // Expand the circle
+  expand() {
+
+    // Adjust the radius based on frame rate
+    this.r += (this.speed / frameRate());
+  }
+  
+
 
   // Display the circle
   display() {
@@ -86,10 +101,6 @@ class Circle {
     ellipse(this.x, this.y, this.r * 2);
   }
 
-  // Expand the circle
-  expand() {
-    this.r += this.speed;
-  }
 
   // Check if this circle intersects with another circle
   outerIntersects(other) {
@@ -107,6 +118,8 @@ class Sensor {
     this.id = id; // Sensor identifier
     this.startTime = 0; // Initialize timer for this sensor
     this.hasCollided = false; // Flag to indicate collision
+    this.collisionTime = 0; // property to store the time of collision
+    this.collisionCircleRadius=0;
   }
 
   // Display the sensor as a red circle with a label
@@ -117,5 +130,15 @@ class Sensor {
     textAlign(CENTER, CENTER);
     textSize(16);
     text(this.id, this.x, this.y); // Display the sensor number in the center
+    
+    if (this.hasCollided) {
+      noFill();
+      stroke(0);
+      let radiuss= ((this.collisionTime-startTime)/1000)*(60);
+      ellipse(this.x, this.y, radiuss);
+      print(this.collisionTime);
+      print(radiuss);
+      
+    }
   }
 }
