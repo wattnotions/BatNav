@@ -4,17 +4,18 @@ let cooldown = 1000; // Cooldown time in milliseconds
 let timerStarted = false;
 let startTime;
 let maxCircleSize = 300; // Maximum size for the circles
+let collidedSensorCount = 0; // Counter for collided sensors
 
 function setup() {
-  createCanvas(400, 400);
+  createCanvas(800, 800);
 
   // Create a new Circle object and add it to the array
   
 
   // Create three Sensor objects with defined x and y positions
   sensors.push(new Sensor(100, 100, 1));
-  sensors.push(new Sensor(300, 100, 2));
-  sensors.push(new Sensor(200, 300, 3));
+  sensors.push(new Sensor(700, 100, 2));
+  sensors.push(new Sensor(400, 700, 3));
 }
 
 function draw() {
@@ -25,12 +26,7 @@ function draw() {
     circles[i].display();
     circles[i].expand();
 
-    // Check if the circle is too large and remove it
-    if (circles[i].r > maxCircleSize) {
-      circles.splice(i, 1);
-      i--;
-      continue;
-    }
+   
 
     // Check if the expanding circle's outer line collides with a sensor circle
     for (let j = 0; j < sensors.length; j++) {
@@ -40,18 +36,23 @@ function draw() {
         print("Sensor " + sensor.id + " milliseconds: " + (millis() - sensor.startTime));
         sensor.startTime = millis(); // Reset the timer for this sensor
         sensor.hasCollided = true; // Set the flag to indicate collision
+        collidedSensorCount++; // Increment the collided sensor count
       }
 
-      // Reset the flag when the circle moves away from the sensor
-      if (!circles[i].outerIntersects(sensor)) {
-        sensor.hasCollided = false;
-      }
+      
     }
   }
 
   // Loop through the sensors array and display each sensor
   for (let i = 0; i < sensors.length; i++) {
     sensors[i].display();
+  }
+  
+  if (collidedSensorCount === 3) {
+    print("All three sensors have collided!");
+    circles.splice(0, circles.length);
+    collidedSensorCount =0;
+    // You can add additional actions here when all sensors have collided
   }
 }
 
@@ -63,6 +64,10 @@ function mouseClicked() {
   // Start the timer
   timerStarted = true;
   startTime = millis();
+  
+  for (let i = 0; i < sensors.length; i++) {
+      sensors[i].hasCollided = false;
+    }
 }
 
 // Define the Circle class
@@ -71,7 +76,7 @@ class Circle {
     this.x = x;
     this.y = y;
     this.r = r;
-    this.speed = 0.5; // Speed at which the circle expands
+    this.speed = 1; // Speed at which the circle expands
   }
 
   // Display the circle
