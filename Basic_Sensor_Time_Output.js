@@ -5,10 +5,13 @@ let timerStarted = false;
 let startTime;
 let maxCircleSize = 300; // Maximum size for the circles
 let collidedSensorCount = 0; // Counter for collided sensors
+let lastTime=0;
+let speed = 1;
 
 function setup() {
   createCanvas(800, 800);
-  frameRate(30);
+
+  
 
 
   // Create a new Circle object and add it to the array
@@ -23,7 +26,8 @@ function setup() {
 function draw() {
   background(220);
   
-
+  //print(millis()-lastTime)
+  //lastTime = millis()
   // Loop through the circles array and display each circle
   for (let i = 0; i < circles.length; i++) {
     circles[i].display();
@@ -82,14 +86,14 @@ class Circle {
     this.x = x;
     this.y = y;
     this.r = r;
-    this.speed = 60; // Speed at which the circle expands in pixels per second
+    this.speed = speed; // Speed at which the circle expands in pixels per second
   }
   
   // Expand the circle
   expand() {
 
     // Adjust the radius based on frame rate
-    this.r += (this.speed / frameRate());
+    this.r += (this.speed);
   }
   
 
@@ -134,10 +138,11 @@ class Sensor {
     if (this.hasCollided) {
       noFill();
       stroke(0);
-      let radiuss= ((this.collisionTime-startTime)/1000)*(60);
-      ellipse(this.x, this.y, radiuss);
-      print(this.collisionTime);
-      print(radiuss);
+      let numFrames = ((this.collisionTime-startTime)/1000)*(60)
+      let radiuss= numFrames*speed
+      ellipse(this.x, this.y, radiuss*2);
+      print(this.collisionTime-startTime);
+      //print(radiuss);
       
     }
   }
