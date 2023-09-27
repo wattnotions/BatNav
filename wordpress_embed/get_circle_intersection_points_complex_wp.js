@@ -6,21 +6,21 @@ let startTime;
 let maxCircleSize = 300; // Maximum size for the circles
 let collidedSensorCount = 0; // Counter for collided sensors
 let lastTime=0;
-let speed = 1;
+let speed = 4;
 
 function setup() {
-  createCanvas(800, 800);
+    createCanvas(600, 400);
 
   
+    frameRate(30);
 
-
-  // Create a new Circle object and add it to the array
+    // Create a new Circle object and add it to the array
+    
   
-
-  // Create three Sensor objects with defined x and y positions
-  sensors.push(new Sensor(100, 100, 1));
-  sensors.push(new Sensor(700, 100, 2));
-  sensors.push(new Sensor(400, 700, 3));
+    // Create three Sensor objects with defined x and y positions
+    sensors.push(new Sensor(100, 100, 1));
+    sensors.push(new Sensor(500, 100, 2));
+    sensors.push(new Sensor(300, 300, 3));
 }
 
 function draw() {
@@ -60,13 +60,59 @@ function draw() {
   
   if (collidedSensorCount === 3) {
     print("All three sensors have collided!");
+    
+    background(220);
+    
+    for (let i = 0; i < sensors.length; i++) {
+    sensors[i].display();
+  }
+  
+    // Check for intersections between the sensors
+    for (let i = 0; i < sensors.length; i++) {
+      for (let j = i + 1; j < sensors.length; j++) {
+        const sensor1 = sensors[i];
+        const sensor2 = sensors[j];
+  
+        // Calculate the intersection points between sensor1 and sensor2
+        const intersections = findCircleIntersections(
+          sensor1.x,
+          sensor1.y,
+          sensor1.collisionCircleRadius,
+          sensor2.x,
+          sensor2.y,
+          sensor2.collisionCircleRadius
+        );
+  
+        if (intersections.length > 0) {
+          print(`Sensors ${sensor1.id} and ${sensor2.id} intersect at:`);
+          for (let k = 0; k < intersections.length; k++) {
+            const intersection = intersections[k];
+            print(`(${intersection.x}, ${intersection.y})`);
+            // You can add additional actions here for each intersection point
+            
+            // Draw a small red circle at the intersection point
+            fill(255, 0, 0); // Red color
+            noStroke();
+            ellipse(intersection.x, intersection.y, 10); // Adjust the size as needed
+            
+            
+            
+          }
+        }
+        noLoop();
+      }
+    }
+  
+    // Clear the circles and reset the collidedSensorCount
     circles.splice(0, circles.length);
-    collidedSensorCount =0;
+    collidedSensorCount = 0;
     // You can add additional actions here when all sensors have collided
   }
+  
 }
 
 function mouseClicked() {
+  loop();
   // When the mouse is clicked, create an expanding black line circle
   let newCircle = new Circle(mouseX, mouseY, 2); // Start with a small circle
   circles.push(newCircle);
@@ -138,12 +184,42 @@ class Sensor {
     if (this.hasCollided) {
       noFill();
       stroke(0);
-      let numFrames = ((this.collisionTime-startTime)/1000)*(60)
+      let numFrames = ((this.collisionTime-startTime)/1000)*(30)
       let radiuss= numFrames*speed
+      this.collisionCircleRadius=radiuss;
       ellipse(this.x, this.y, radiuss*2);
-      print(this.collisionTime-startTime);
+      //print(this.collisionTime-startTime);
       //print(radiuss);
       
     }
   }
+}
+
+function findCircleIntersections(x1, y1, r1, x2, y2, r2) {
+  // Calculate the distance between the two circle centers
+  const d = dist(x1, y1, x2, y2);
+
+  // Check if the circles are too far apart to intersect
+  if (d > r1 + r2) {
+    return "No intersection (circles are too far apart)";
+  }
+
+  // Check if one circle is completely inside the other
+  if (d < Math.abs(r1 - r2)) {
+    return "No intersection (one circle is inside the other)";
+  }
+
+  // Calculate the intersection points
+  const a = (r1 * r1 - r2 * r2 + d * d) / (2 * d);
+  const h = Math.sqrt(r1 * r1 - a * a);
+  const x3 = x1 + (a * (x2 - x1)) / d;
+  const y3 = y1 + (a * (y2 - y1)) / d;
+  const x4 = x3 + (h * (y2 - y1)) / d;
+  const y4 = y3 - (h * (x2 - x1)) / d;
+
+  // Calculate the second intersection point (if it exists)
+  const x5 = x3 - (h * (y2 - y1)) / d;
+  const y5 = y3 + (h * (x2 - x1)) / d;
+
+  return [{ x: x4, y: y4 }, { x: x5, y: y5 }];
 }
