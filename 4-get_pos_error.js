@@ -5,43 +5,34 @@ let timerStarted = false;
 let startTime;
 let maxCircleSize = 300; // Maximum size for the circles
 let collidedSensorCount = 0; // Counter for collided sensors
-let lastTime=0;
+let lastTime = 0;
 let speed = 5;
-let clickx=0
-let clicky=0;
+let clickx = 0;
+let clicky = 0;
 let myerror;
+let inter_array = [];
 
 function setup() {
   createCanvas(800, 800);
-
   frameRate(30);
-
-
-  // Create a new Circle object and add it to the array
-  
 
   // Create three Sensor objects with defined x and y positions
   sensors.push(new Sensor(100, 100, 1));
   sensors.push(new Sensor(700, 100, 2));
   sensors.push(new Sensor(400, 700, 3));
-  
+
   myerror = new ShowError();
-  
 }
 
 function draw() {
   background(220);
-  
+
   myerror.displayClickOrigin();
-  
-  //print(millis()-lastTime)
-  //lastTime = millis()
+
   // Loop through the circles array and display each circle
   for (let i = 0; i < circles.length; i++) {
     circles[i].display();
     circles[i].expand();
-
-   
 
     // Check if the expanding circle's outer line collides with a sensor circle
     for (let j = 0; j < sensors.length; j++) {
@@ -49,15 +40,12 @@ function draw() {
       if (circles[i].outerIntersects(sensor) && !sensor.hasCollided && millis() - sensor.startTime > cooldown) {
         // Circle's outer line hits the sensor and cooldown time has passed
         print("Sensor " + sensor.id + " milliseconds: " + (millis() - sensor.startTime));
-        
-        
+
         sensor.hasCollided = true; // Set the flag to indicate collision
         sensor.collisionTime = millis();
-        
+
         collidedSensorCount++; // Increment the collided sensor count
       }
-
-      
     }
   }
 
@@ -65,23 +53,16 @@ function draw() {
   for (let i = 0; i < sensors.length; i++) {
     sensors[i].display();
   }
-  
+
   if (collidedSensorCount === 3) {
     print("All three sensors have collided!");
-    
-    background(220);
-    
-    for (let i = 0; i < sensors.length; i++) {
-    sensors[i].display();
-  }
-    myerror.displayClickOrigin();
-  
+
     // Check for intersections between the sensors
     for (let i = 0; i < sensors.length; i++) {
       for (let j = i + 1; j < sensors.length; j++) {
         const sensor1 = sensors[i];
         const sensor2 = sensors[j];
-  
+
         // Calculate the intersection points between sensor1 and sensor2
         const intersections = findCircleIntersections(
           sensor1.x,
@@ -91,40 +72,48 @@ function draw() {
           sensor2.y,
           sensor2.collisionCircleRadius
         );
-  
+
         if (intersections.length > 0) {
           print(`Sensors ${sensor1.id} and ${sensor2.id} intersect at:`);
           for (let k = 0; k < intersections.length; k++) {
             const intersection = intersections[k];
             print(`(${intersection.x}, ${intersection.y})`);
             // You can add additional actions here for each intersection point
-            
+
             // Draw a small red circle at the intersection point
             fill(255, 0, 0); // Red color
             noStroke();
             ellipse(intersection.x, intersection.y, 10); // Adjust the size as needed
-            
-            
-            
+
+            inter_array.push([intersection.x, intersection.y]); // Store intersection points
           }
         }
-        noLoop();
       }
     }
-  
+
+    // Estimate the position based on the intersections and sensors
+    const calcedPos = estimatePosition(inter_array, sensors);
+
+    // Display the estimated position
+    print("Estimated Position:", calcedPos);
+
+    fill(0, 0, 255); // Blue color
+    noStroke();
+    ellipse(calcedPos.x, calcedPos.y, 10); // Display estimated position as a blue circle
+
+    noLoop();
+
     // Clear the circles and reset the collidedSensorCount
     circles.splice(0, circles.length);
     collidedSensorCount = 0;
-    // You can add additional actions here when all sensors have collided
   }
-  
 }
 
 function mouseClicked() {
   loop();
-  
-  clickx=mouseX;
-  clicky=mouseY;
+
+  clickx = mouseX;
+  clicky = mouseY;
   // When the mouse is clicked, create an expanding black line circle
   let newCircle = new Circle(mouseX, mouseY, 2); // Start with a small circle
   circles.push(newCircle);
@@ -132,10 +121,10 @@ function mouseClicked() {
   // Start the timer
   timerStarted = true;
   startTime = millis();
-  
+
   for (let i = 0; i < sensors.length; i++) {
-      sensors[i].hasCollided = false;
-    }
+    sensors[i].hasCollided = false;
+  }
 }
 
 // Define the Circle class
@@ -212,7 +201,7 @@ class Sensor {
     if (this.hasCollided) {
       noFill();
       stroke(0);
-      let numFrames = ((this.collisionTime-startTime)/1000)*(30)
+      let numFrames = ((this.collisionTime-startTime)/1000)*(33)
       let radiuss= numFrames*speed
       this.collisionCircleRadius=radiuss;
       ellipse(this.x, this.y, radiuss*2);
@@ -250,4 +239,89 @@ function findCircleIntersections(x1, y1, r1, x2, y2, r2) {
   const y5 = y3 + (h * (x2 - x1)) / d;
 
   return [{ x: x4, y: y4 }, { x: x5, y: y5 }];
+}
+
+function estimatePosition(intersections, sensors) {
+  // Check if there are enough intersection points for clustering
+  if (intersections.length < 2) {
+    return "Not enough intersection points to estimate position";
+  }
+
+  // Determine the number of clusters based on the number of intersections
+  const numClusters = min(3, floor(intersections.length / 2)); // Maximum 3 clusters
+
+  // Initialize cluster centers with actual intersection points
+  const clusterCenters = [];
+  for (let i = 0; i < numClusters; i++) {
+    clusterCenters.push(intersections[i]);
+  }
+
+  // Perform k-means clustering for a fixed number of iterations
+  const maxIterations = 100;
+  for (let iteration = 0; iteration < maxIterations; iteration++) {
+    // Initialize cluster assignments
+    const clusterAssignments = new Array(intersections.length);
+
+    // Assign each point to the nearest cluster center
+    for (let i = 0; i < intersections.length; i++) {
+      let closestCluster = 0;
+      let closestDistance = dist(
+        intersections[i][0], // x-coordinate of the point
+        intersections[i][1], // y-coordinate of the point
+        clusterCenters[0][0], // x-coordinate of cluster center
+        clusterCenters[0][1] // y-coordinate of cluster center
+      );
+
+      for (let j = 1; j < numClusters; j++) {
+        const distance = dist(
+          intersections[i][0], // x-coordinate of the point
+          intersections[i][1], // y-coordinate of the point
+          clusterCenters[j][0], // x-coordinate of cluster center
+          clusterCenters[j][1] // y-coordinate of cluster center
+        );
+
+        if (distance < closestDistance) {
+          closestCluster = j;
+          closestDistance = distance;
+        }
+      }
+
+      clusterAssignments[i] = closestCluster;
+    }
+
+    // Update cluster centers to be the average of assigned points
+    for (let i = 0; i < numClusters; i++) {
+      let sumX = 0;
+      let sumY = 0;
+      let count = 0;
+
+      for (let j = 0; j < intersections.length; j++) {
+        if (clusterAssignments[j] === i) {
+          sumX += intersections[j][0];
+          sumY += intersections[j][1];
+          count++;
+        }
+      }
+
+      clusterCenters[i] = [sumX / count, sumY / count];
+    }
+  }
+
+  // Calculate the average of cluster centers as the estimated position
+  const estimatedPosition = calculateCentroid(clusterCenters);
+
+  return estimatedPosition;
+}
+
+// Calculate the centroid of a set of points
+function calculateCentroid(points) {
+  let sumX = 0;
+  let sumY = 0;
+  for (const point of points) {
+    sumX += point[0]; // x-coordinate
+    sumY += point[1]; // y-coordinate
+  }
+  const centroidX = sumX / points.length;
+  const centroidY = sumY / points.length;
+  return { x: centroidX, y: centroidY };
 }
