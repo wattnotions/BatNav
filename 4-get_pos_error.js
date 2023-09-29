@@ -96,8 +96,21 @@ function draw() {
     }
 
     // Estimate the position based on the intersections and sensors
-    calculateMinDistances(inter_array)
+    const selectedPoints = calculateMinDistances(inter_array);
+
+    // Call the calculateCentroid function
+    const centroid = calculateCentroid(selectedPoints);
     inter_array.splice(0, inter_array.length);
+    
+    
+    const centroidX = centroid[0];
+    const centroidY = centroid[1];
+    fill(0, 0, 255); // Red color
+    noStroke();
+    ellipse(centroidX, centroidY, 10);
+    
+    calculateAndPrintError(clickx, clicky, centroidX, centroidY);
+    
     noLoop();
 
     // Clear the circles and reset the collidedSensorCount
@@ -240,22 +253,11 @@ function findCircleIntersections(x1, y1, r1, x2, y2, r2) {
   return [{ x: x4, y: y4 }, { x: x5, y: y5 }];
 }
 
-function calculateCumDistances(points) {
-  for (let i = 0; i < points.length; i++) {
-    let totalDistance = 0;
-    for (let j = 0; j < points.length; j++) {
-      if (i !== j) {
-        let d = dist(points[i][0], points[i][1], points[j][0], points[j][1]);
-        totalDistance += d;
-      }
-    }
-    console.log(`point ${i + 1} : cumulative distance : ${totalDistance}`);
-  }
-}
+
 
 function calculateMinDistances(points) {
-  
-  print(points);
+  const selectedPoints = [];
+
   for (let i = 0; i < points.length; i++) {
     let minDistance = Infinity; // Initialize with a high value
     for (let j = 0; j < points.length; j++) {
@@ -267,5 +269,40 @@ function calculateMinDistances(points) {
       }
     }
     console.log(`point ${i + 1} : minimum distance : ${minDistance}`);
+
+    if (minDistance < 50) {
+      selectedPoints.push(points[i]);
+    }
   }
+
+  return selectedPoints;
 }
+
+// Modify the calculateCentroid function to return the centroid as an array
+function calculateCentroid(points) {
+  let xSum = 0;
+  let ySum = 0;
+
+  for (let i = 0; i < points.length; i++) {
+    xSum += points[i][0];
+    ySum += points[i][1];
+  }
+
+  const centroidX = xSum / points.length;
+  const centroidY = ySum / points.length;
+  console.log(`Centroid X: ${centroidX}, Centroid Y: ${centroidY}`);
+  return [centroidX, centroidY]; // Return the centroid as an array
+}
+
+// Create a function to calculate the error and print it to the console
+function calculateAndPrintError(clickX, clickY, centroidX, centroidY) {
+  const error = dist(clickX, clickY, centroidX, centroidY);
+  fill(0); // Set text color to black
+  textSize(16); // Set text size
+  textAlign(CENTER, CENTER); // Center-align the text
+  text(`Error ${error.toFixed(0)} Pixels`, width / 2, height / 2);
+  console.log(`Error between click point and centroid: ${error}`);
+}
+
+
+
